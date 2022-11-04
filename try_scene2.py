@@ -12,9 +12,12 @@ root,canvas = init_tk()
 # init polygonas - random square fields+walls on height map
 
 planes = []
+normvecs = []
 D = 100000
 R6 = D/math.sqrt(3)
 
+def getnormvecs(planes):
+    return [ vector_mul(sub_vec(p[1],p[0]),sub_vec(p[2],p[1])) for p in planes ]
 
 def plane(x,y,z):
     xx = x*D
@@ -44,7 +47,7 @@ def cube(x,y,z):
 def hexel(x,y,z):
     h = hexagone(x,y,z*R6)
     w = [
-        ( p1, (p1[0],p1[1],p1[2]+R6), (p2[0],p2[1],p2[2]+R6), p2 )   
+        (  p1, p2, add_vec(p2,(0,0,R6)), add_vec(p1,(0,0,R6)) )   
         for p1,p2 in zip(h,[*h[1:],h[0]])
         ]
     h2 = hexagone(x,y,z*R6+R6)
@@ -57,7 +60,7 @@ def pillarx(x,y,z,h):
     return itertools.chain(*[hexel(x,y,z+zz) for zz in range(h)])
 
 
-N = 100
+N = 20
 
 for i in range(N):
     for j in range(N):
@@ -68,26 +71,21 @@ for i in range(N):
 planes += pillarx(0,0,0,2)
 planes += pillarx(10,0,0,5)
 planes += pillarx(0,10,0,8)
-for i in range(N**2//5): planes += pillarx(random.randint(0,N-1),random.randint(0,N-1),0,random.choice([0,0,0,0,0,1,1,1,2,2,3]))
+for i in range(N**2//5):
+    planes += pillarx(random.randint(0,N-1),random.randint(0,N-1),0,
+                        random.choice([0,0,0,0,0,1,1,1,2,2,3])
+                        )
 
 
-##DEBUG
-#planes = [
-#    [(0,0,0),
-#    (200,0,0),
-#    (0,300,0)]
-#]
-
-
-CAM_P = hexp(-10,-10,23) #(20*D,-2000,4000)
+CAM_P = hexp(-10,-10,23)
 CAM_VEC = sub_vec(hexp(N//2,N//2,0),CAM_P)
-CAM_HOR= (-1,0,0.2)
+CAM_HOR = (-1,0,0.2)
 F = 1700
 
 LIGHT = (0,0,-5)
 LIGHT = mul_vs(LIGHT,1/len_vec(LIGHT))
 
-def m2cam():
+def m2cam(ispoints=True):
     m_cam = m_1()
     cx,cy,cz = CAM_VEC
     try:
@@ -110,8 +108,10 @@ def m2cam():
         if cx < 0: gamma = math.pi - gamma
         m_cam = mul_mn(m_rotz(-gamma),m_cam)
 
-    return mul_mn(m_cam, m_move(neg_vec(CAM_P)))
-
+    if ispoints:
+        return mul_mn(m_cam, m_move(neg_vec(CAM_P)))
+    else:
+        return m_cam
 
 
 
@@ -163,13 +163,19 @@ def polygons(pl2d):
         )
 
 
-def farpoint(plane): return min(p[2] for p in plane)
+def farpoint(plane): return max(p[2] for p in plane)
 
 def draw():
     t1 = time.time_ns()
     # convert to camera choords
     m = m2cam()
+    mnorm = m2cam(False)
+  
     cplanes = planes2cam(planes,m)
+    normvecs = getnormvecs(planes)
+    normvecs1 = planes2cam([normvecs],mnorm)[0]
+    idx = [scalar_mul(cplanes[i][0],n)>=0 for i,n in enumerate(normvecs1)]
+    cplanes = list(itertools.compress(cplanes,idx))
     t2 = time.time_ns()
     
     cplanes.sort(reverse=True,key=farpoint )
@@ -208,7 +214,7 @@ def step():
     draw()
     global planes
     planes = planes2cam(planes,M_STEP)
-
+        
     root.after(10,step)
     
 step()

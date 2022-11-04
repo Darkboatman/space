@@ -124,7 +124,7 @@ def vector_mul(a,b):
     (b1,b2,b3) = b
     return (
         a2*b3-a3*b2,
-        a1*b3-a3*b1,
+        a3*b1-a1*b3,
         a1*b2-a2*b1
     )
 
@@ -156,3 +156,7 @@ def project_zf(v,f):
     x,y,z = v
     if z>=0: return f*x/(z+f),f*y/(z+f)
     else: return None
+
+
+
+
