@@ -7,8 +7,6 @@ import time
 
 root,canvas = init_tk()
 
-
-
 # init polygonas - random square fields+walls on height map
 
 planes = []
@@ -60,7 +58,7 @@ def pillarx(x,y,z,h):
     return itertools.chain(*[hexel(x,y,z+zz) for zz in range(h)])
 
 
-N = 20
+N = 100
 
 for i in range(N):
     for j in range(N):
@@ -196,7 +194,12 @@ def draw():
 
     canvas.create_rectangle(1000-10,500-10,1000+10,500+10,outline='red')
     
-    print("planes",len(planes),"tocam", (t2-t1)/1e6, "sort", (t3-t2)/1e6,"project,center,clip", (t4-t3)/1e6, "tk draw",(t5-t4)/1e6)
+    print("planes",len(planes),
+        "tocam", (t2-t1)/1e6, 
+        "sort", (t3-t2)/1e6,
+        "project,center,clip", (t4-t3)/1e6, 
+        "tk draw",(t5-t4)/1e6,
+        "polygonas",len(dplanes))
 
 # sort by distance
 
@@ -215,9 +218,15 @@ def step():
     global planes
     planes = planes2cam(planes,M_STEP)
         
-    root.after(10,step)
-    
-step()
+    #root.after(10,step)
+
+
+import cProfile as cp
+
+cp.run('step()',sort='cumulative')
+
+
+#step()
 #draw()
 
 root.mainloop()
